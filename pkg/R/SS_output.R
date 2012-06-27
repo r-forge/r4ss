@@ -263,11 +263,30 @@ SS_output <-
       yielddat <- yielddat[order(yielddat$Depletion,decreasing = FALSE),]
     }
   }else{
-    if(verbose) cat("You skipped the forecast file\n",
-                    "setting sprtarg and btarg to 0.4 (can override in SS_plots)\n")
-    sprtarg <- 0.4
-    btarg <- 0.4
+    if(verbose)
+      cat("You skipped the forecast file\n",
+          "  setting SPR target and Biomass target to -999\n",
+          "  lines won't be drawn for these targets\n",
+          "  (can replace or override in SS_plots by setting 'sprtarg' and 'btarg')\n")
+    sprtarg <- -999
+    btarg <- -999
   }
+  minbthresh <- -999
+  if(btarg==0.4){
+    if(verbose)
+      cat("Setting minimum biomass threshhold to 0.25\n",
+          "  based on US west coast assumption associated with biomass target of 0.4.\n",
+          "  (can replace or override in SS_plots by setting 'minbthresh')\n")
+    minbthresh <- 0.25 # west coast assumption for non flatfish
+  }
+  if(btarg==0.25){
+    if(verbose)
+      cat("Setting minimum biomass threshhold to 0.25\n",
+          "  based on US west coast assumption associated with flatfish target of 0.25.\n",
+          "  (can replace or override in SS_plots by setting 'minbthresh')\n")
+    minbthresh <- 0.125 # west coast assumption for flatfish
+  }
+  
   flush.console()
 
   # check for use of temporary files
@@ -1078,16 +1097,24 @@ if(FALSE){
     discard <- matchfun2("DISCARD_OUTPUT",shift,"MEAN_BODY_WT_OUTPUT",-1,header=FALSE)
     names(discard) <- c("Fleet","Yr","Seas","Obs","Exp","Std_in","Std_use","Dev")
   }
-
+  
   discard_type <- NA
   if(!is.na(discard) && nrow(discard)>1){
-    for(icol in 2:ncol(discard)) discard[,icol] <- as.numeric(discard[,icol])
-    for(i in 2:ncol(discard)) discard[,i] <- as.numeric(discard[,i])
-    discard$FleetName <- NA
-    discard$FleetNum <- NA
-    for(i in 1:nrow(discard)){
-      discard$FleetNum[i] <- strsplit(discard$Fleet[i],"_")[[1]][1]
-      discard$FleetName[i] <- substring(discard$Fleet[i],nchar(discard$FleetNum[i])+2)
+    discard[discard=="_"] <- NA
+    if(SS_versionNumeric <= 3.23){ # v3.23 and before had things combined under "name"
+      for(icol in (1:ncol(discard))[!(names(discard) %in% c("Fleet"))])
+        discard[,icol] <- as.numeric(discard[,icol])
+      discard$FleetNum <- NA
+      for(i in 1:nrow(discard)){
+        discard$FleetNum[i] <- strsplit(discard$Name[i],"_")[[1]][1]
+        discard$FleetName[i] <- substring(discard$Name[i],nchar(discard$FleetNum[i])+2)
+      }
+    }else{ # v3.24 and beyond has separate columns for fleet number and fleet name
+      for(icol in (1:ncol(discard))[!(names(discard) %in% c("Name","SuprPer"))])
+        discard[,icol] <- as.numeric(discard[,icol])
+      # redundant columns are holdovers from earlier SS versions
+      discard$FleetNum <- discard$Fleet
+      discard$FleetName <- discard$Name
     }
   }else{
     discard <- NA
@@ -1103,15 +1130,23 @@ if(FALSE){
   DF_mnwgt <- rawrep[matchfun("log(L)_based_on_T_distribution"),1]
   if(!is.na(DF_mnwgt)){
     DF_mnwgt <- as.numeric(strsplit(DF_mnwgt,"=_")[[1]][2])
-    mnwgt <- matchfun2("MEAN_BODY_WT_OUTPUT",2,"FIT_LEN_COMPS",-1,cols=1:10,header=TRUE)
-    if(nrow(mnwgt)>0){
-      for(i in 2:ncol(mnwgt)) mnwgt[,i] <- as.numeric(mnwgt[,i])
-      mnwgt$FleetName <- NA
+    mnwgt <- matchfun2("MEAN_BODY_WT_OUTPUT",2,"FIT_LEN_COMPS",-1,header=TRUE)
+
+    mnwgt[mnwgt=="_"] <- NA
+    if(SS_versionNumeric <= 3.23){ # v3.23 and before had things combined under "name"
+      for(icol in (1:ncol(mnwgt))[!(names(mnwgt) %in% c("Fleet"))])
+        mnwgt[,icol] <- as.numeric(mnwgt[,icol])
       mnwgt$FleetNum <- NA
       for(i in 1:nrow(mnwgt)){
-        mnwgt$FleetNum[i] <- strsplit(mnwgt$Fleet[i],"_")[[1]][1]
-        mnwgt$FleetName[i] <- substring(mnwgt$Fleet[i],nchar(mnwgt$FleetNum[i])+2)
+        mnwgt$FleetNum[i] <- strsplit(mnwgt$Name[i],"_")[[1]][1]
+        mnwgt$FleetName[i] <- substring(mnwgt$Name[i],nchar(mnwgt$FleetNum[i])+2)
       }
+    }else{ # v3.24 and beyond has separate columns for fleet number and fleet name
+      for(icol in (1:ncol(mnwgt))[!(names(mnwgt) %in% c("Name"))])
+        mnwgt[,icol] <- as.numeric(mnwgt[,icol])
+      # redundant columns are holdovers from earlier SS versions
+      mnwgt$FleetNum <- mnwgt$Fleet
+      mnwgt$FleetName <- mnwgt$Name
     }
   }else{
     DF_mnwgt <- NA
@@ -1154,7 +1189,7 @@ if(FALSE){
   returndat$B_ratio_denominator <- as.numeric(strsplit(managementratiolabels$Label[3],"%")[[1]][1])/100
   returndat$sprtarg <- sprtarg
   returndat$btarg <- btarg
-  returndat$minbthresh <- ifelse(btarg==0.25,0.125,0.25)
+  returndat$minbthresh <- minbthresh
 
 
   # Spawner-recruit curve
