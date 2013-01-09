@@ -102,7 +102,7 @@ SS_output <-
 
   # rough limits on compatibility of this code
   SS_versionMax <- 3.24
-  SS_versionMin <- 3.11 # may no longer work
+  SS_versionMin <- 3.21 # a stab in the dark at which versions still work
 
   # test for version compatibility with this code
   if(SS_versionNumeric < SS_versionMin  | SS_versionNumeric > SS_versionMax){
@@ -183,9 +183,9 @@ SS_output <-
     }
     comp <- TRUE
   }else{
-    cat("Missing ",compfile,". Change the compfile input or rerun model to get the file.\n",sep="")
-    #return()
-    if(NoCompOK) comp <- FALSE else return()
+    if(!NoCompOK) stop("Missing ",compfile,
+                       ". Change the compfile input or rerun model to get the file.\n",sep="")
+    else comp <- FALSE
   }
 
   # read report file
@@ -414,14 +414,30 @@ SS_output <-
       rawcompdbase <- read.table(file=compfile, col.names=col.names, fill=TRUE, colClasses="character", skip=compskip, nrows=-1)
       names(rawcompdbase) <- rawcompdbase[1,]
       names(rawcompdbase)[names(rawcompdbase)=="Used?"] <- "Used"
-      compdbase <- rawcompdbase[2:(nrow(rawcompdbase)-4),] # subtract header line and last 4 lines
+      endfile <- grep("End_comp_data",rawcompdbase[,1])
+      compdbase <- rawcompdbase[2:(endfile-2),] # subtract header line and last 2 lines
+
+      # make correction to tag output associated with 3.24f (fixed in later versions)
+      if(substr(SS_version,1,9)=="SS-V3.24f"){
+        cat('Correcting for bug in tag data output associated with SSv3.24f\n')
+        tag1rows <- compdbase$Pick_gender=="TAG1"
+        if(any(tag1rows)){
+          tag1 <- compdbase[tag1rows,]
+          tag1new <- tag1
+          tag1new[,4:23] <- tag1new[,3:22] # shift columns over
+          tag1new$Yr.S <- tag1new$Yr # move Yr.S
+          tag1new$Yr <- floor(as.numeric(tag1new$Yr)) # turn Yr.S into Yr
+          compdbase[tag1rows,] <- tag1new
+        }
+      }
+
       compdbase <- compdbase[compdbase$Obs!="",]
       compdbase[compdbase=="_"] <- NA
       compdbase$Used[is.na(compdbase$Used)] <- "yes"
       if(!("SuprPer" %in% names(compdbase))) compdbase$SuprPer <- "No"
       compdbase$SuprPer[is.na(compdbase$SuprPer)] <- "No"
 
-      n <- sum(is.na(compdbase$N) & compdbase$Used!="skip")
+      n <- sum(is.na(compdbase$N) & compdbase$Used!="skip" & compdbase$Kind!="TAG2")
       if(n>0){
         cat("Warning:",n,"rows from composition database have NA sample size\n  but are not part of a super-period. (Maybe input as N=0?)\n")
       }
@@ -442,7 +458,6 @@ SS_output <-
         }
       }
 
-
       # deal with Lbins
       compdbase$Lbin_range <- compdbase$Lbin_hi - compdbase$Lbin_lo
       compdbase$Lbin_mid <- 0.5*(compdbase$Lbin_lo + compdbase$Lbin_hi)
@@ -456,6 +471,7 @@ SS_output <-
         notconditional <- !is.na(Lbin_range) & Lbin_range >  aalmaxbinrange
         conditional    <- !is.na(Lbin_range) & Lbin_range <= aalmaxbinrange
       }
+
       if(SS_versionNumeric >= 3.22){
         # new designation of ghost fleets from negative samp size to negative fleet
         lendbase         <- compdbase[compdbase$Kind=="LEN"  & compdbase$Used!="skip",]
@@ -1256,7 +1272,11 @@ if(FALSE){
   }
 
   # Numbers at length
-  rawnatlen <- matchfun2("NUMBERS_AT_LENGTH",1,"CATCH_AT_AGE",-1,cols=1:(11+nlbinspop),substr1=FALSE)
+  if(length(grep("BIOMASS_AT_LENGTH",rawrep[,1]))==0){
+    rawnatlen <- matchfun2("NUMBERS_AT_LENGTH",1,"CATCH_AT_AGE",-1,cols=1:(11+nlbinspop),substr1=FALSE)
+  }else{
+    rawnatlen <- matchfun2("NUMBERS_AT_LENGTH",1,"BIOMASS_AT_LENGTH",-1,cols=1:(11+nlbinspop),substr1=FALSE)
+  }
   if(length(rawnatlen)>1){
     names(rawnatlen) <- rawnatlen[1,]
     rawnatlen <- rawnatlen[-1,]
@@ -1264,6 +1284,18 @@ if(FALSE){
     returndat$natlen <- rawnatlen
   }
 
+  # Biomass at length (first appeared in version 3.24l, 12-5-2012)
+  if(length(grep("BIOMASS_AT_LENGTH",rawrep[,1]))>0){
+    rawbatlen <- matchfun2("BIOMASS_AT_LENGTH",1,"CATCH_AT_AGE",-1,cols=1:(11+nlbinspop),substr1=FALSE)
+    if(length(rawbatlen)>1){
+      names(rawbatlen) <- rawbatlen[1,]
+      rawbatlen <- rawbatlen[-1,]
+      for(i in (1:ncol(rawbatlen))[!(names(rawbatlen) %in% c("Beg/Mid","Era"))]) rawbatlen[,i] = as.numeric(rawbatlen[,i])
+      returndat$batlen <- rawbatlen
+    }
+  }
+
+  
   # Movement
   movement <- matchfun2("MOVEMENT",1,"EXPLOITATION",-1,cols=1:(7+accuage),substr1=FALSE)
   names(movement) <- c(movement[1,1:6],paste("age",movement[1,-(1:6)],sep=""))
@@ -1352,7 +1384,7 @@ if(FALSE){
     returndat$N_ageerror_defs <- N_ageerror_defs <- length(starts)
     if(N_ageerror_defs > 0)
     {
-      nrowsAAK <- nrow(rawAAK)/nsexes - 3
+      nrowsAAK <- nrow(rawAAK)/N_ageerror_defs - 3
       AAK = array(NA,c(N_ageerror_defs,nrowsAAK,accuage+1))
       age_error_mean <- age_error_sd <- data.frame(age=0:accuage)
       for(i in 1:N_ageerror_defs){
@@ -1390,12 +1422,18 @@ if(FALSE){
   #No_fishery_for_Z=M_and_dynamic_Bzero
   Z_at_age <- matchfun2("Z_AT_AGE_Annual_2",1,"Spawning_Biomass_Report_1",-2,header=TRUE)
   M_at_age <- matchfun2("Z_AT_AGE_Annual_1",1,"-ln(Nt+1",-1,matchcol2=5, header=TRUE)
-  Z_at_age[Z_at_age=="_"] <- NA
-  M_at_age[M_at_age=="_"] <- NA
-  if(Z_at_age[[1]][1]!="absent"){
-    for(i in 1:ncol(Z_at_age)) Z_at_age[,i] <- as.numeric(Z_at_age[,i])
-    for(i in 1:ncol(M_at_age)) M_at_age[,i] <- as.numeric(M_at_age[,i])
+  if(nrow(Z_at_age)>0){  
+    Z_at_age[Z_at_age=="_"] <- NA
+    M_at_age[M_at_age=="_"] <- NA
+    if(Z_at_age[[1]][1]!="absent" && nrow(Z_at_age>0)){
+      for(i in 1:ncol(Z_at_age)) Z_at_age[,i] <- as.numeric(Z_at_age[,i])
+      for(i in 1:ncol(M_at_age)) M_at_age[,i] <- as.numeric(M_at_age[,i])
+    }else{
+      Z_at_age <- NA
+      M_at_age <- NA
+    }
   }else{
+    # this could be cleaned up
     Z_at_age <- NA
     M_at_age <- NA
   }
