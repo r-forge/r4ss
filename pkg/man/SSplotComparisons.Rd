@@ -216,13 +216,10 @@ SSplotComparisons(summaryoutput,subplots=1:14,
   \item{new}{
     Create new empty plot window 
   }
-  \item{new}{
+  \item{add}{
     Allows single plot to be added to existing figure. This needs to be
     combined with specific 'subplots' input to make sure only one thing
     gets added.
-  }
-  \item{new}{
-    Create new empty plot window
   }
   \item{verbose}{
     Report progress to R GUI?

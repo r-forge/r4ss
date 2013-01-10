@@ -34,6 +34,7 @@ SSplotComparisons <-
            densityadjust=1,
            fix0=TRUE,
            new=TRUE,
+           add=FALSE,
            verbose=TRUE,
            mcmcVec="default")
 {
