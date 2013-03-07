@@ -62,13 +62,12 @@ SS_output <-
   }
 
   # get info on output files created by Stock Synthesis
-  dir <- paste(dir,"/",sep="")
   shortrepfile <- repfile
-  repfile <- paste(dir,repfile,sep="")
+  repfile <- file.path(dir,repfile)
 
   parfile <- dir(dir,pattern=".par$")
   if(length(parfile)>1){
-    filetimes <- file.info(paste(dir,parfile,sep="/"))$mtime
+    filetimes <- file.info(file.path(dir,parfile))$mtime
     parfile <- parfile[filetimes==max(filetimes)]
     if(verbose) cat("Multiple files in directory match pattern *.par\n",
                     "choosing most recently modified:",parfile,"\n")
@@ -77,7 +76,7 @@ SS_output <-
     if(!hidewarn) cat("Some stats skipped because the .par file not found:\n  ",parfile,"\n")
     parfile <- NA
   }else{
-    parfile <- paste(dir,parfile,sep="/")
+    parfile <- file.path(dir,parfile)
   }
 
   # read three rows to get start time and version number from rep file
@@ -97,9 +96,9 @@ SS_output <-
   # perhaps in the future we will use it to replace SS_versionshort throughout r4ss?
   SS_versionCode <- rephead[grep("#V",rephead)]
   SS_version <- rephead[grep("Stock_Synthesis",rephead)]
+  SS_version <- SS_version[substring(SS_version,1,2)!="#C"] # remove any version numbering in the comments
   SS_versionshort <- toupper(substr(SS_version,1,8))
   SS_versionNumeric <- as.numeric(substring(SS_versionshort,5))
-
   # rough limits on compatibility of this code
   SS_versionMax <- 3.24
   SS_versionMin <- 3.21 # a stab in the dark at which versions still work
@@ -133,7 +132,7 @@ SS_output <-
       }
     }
     # CoVar.sso file
-    covarfile <- paste(dir,covarfile,sep="")
+    covarfile <- file.path(dir,covarfile)
     if(!file.exists(covarfile)){
       stop("covar file not found. Change input to covar=FALSE, or modify 'covarfile' input.\n")
     }
@@ -163,7 +162,7 @@ SS_output <-
   }
 
   # time check for CompReport file
-  compfile <- paste(dir,compfile,sep="")
+  compfile <- file.path(dir,compfile)
   if(file.exists(compfile)){
     comphead <- readLines(con=compfile,n=30)
     compskip <- grep("Composition_Database",comphead)
@@ -212,7 +211,7 @@ SS_output <-
 
   # read forecast report file
   if(forecast){
-    forecastname <- paste(dir,forefile,sep="")
+    forecastname <- file.path(dir,forefile)
     temp <- file.info(forecastname)$size
     if(is.na(temp) | temp==0){
       stop("Forecase-report.sso file is empty.\n",
@@ -245,12 +244,16 @@ SS_output <-
     }else{
       if(SS_versionshort=="SS-V3.11"){
         yielddat <- yieldraw[c(2:(as.numeric(length(yieldraw[,1])-1))),c(4,7)]
+        colnames(yielddat) <- c("Catch","Depletion")
       }else{
-        yielddat <- yieldraw[c(2:(as.numeric(length(yieldraw[,1])-1))),c(5,8)]
+        names <- yieldraw[1,1:9]
+        names[names=="SSB/Bzero"] <- "Depletion"
+        yielddat <- yieldraw[c(2:(as.numeric(length(yieldraw[,1])-1))),1:9]
+        names(yielddat) <- names #colnames(yielddat) <- c("Catch","Depletion","YPR")
       }
-      colnames(yielddat) <- c("Catch","Depletion")
-      yielddat$Catch <- as.numeric(yielddat$Catch)
-      yielddat$Depletion <- as.numeric(yielddat$Depletion)
+      for(icol in 1:ncol(yielddat)){
+        yielddat[,icol] <- as.numeric(yielddat[,icol])
+      }
       yielddat <- yielddat[order(yielddat$Depletion,decreasing = FALSE),]
     }
   }else{
@@ -284,13 +287,13 @@ SS_output <-
   logfile <- dir(dir,pattern=".log$")
   logfile <- logfile[logfile != "fmin.log"]
   if(length(logfile)>1){
-    filetimes <- file.info(paste(dir,logfile,sep="/"))$mtime
+    filetimes <- file.info(file.path(dir,logfile))$mtime
     logfile <- logfile[filetimes==max(filetimes)]
     if(verbose) cat("Multiple files in directory match pattern *.log\n",
                     "choosing most recently modified file:",logfile,"\n")
   }
-  if(length(logfile)==1 && file.info(paste(dir,logfile,sep='/'))$size>0){
-    logfile <- read.table(paste(dir,logfile,sep='/'))[,c(4,6)]
+  if(length(logfile)==1 && file.info(file.path(dir,logfile))$size>0){
+    logfile <- read.table(file.path(dir,logfile))[,c(4,6)]
     names(logfile) <- c("TempFile","Size")
     maxtemp <- max(logfile$Size)
     if(maxtemp==0){
@@ -308,7 +311,7 @@ SS_output <-
 
   # read warnings file
   if(warn){
-    warnname <- paste(dir,"warning.sso",sep="")
+    warnname <- file.path(dir,"warning.sso")
     if(!file.exists(warnname)){
       cat("warning.sso file not found\n")
       nwarn <- NA
@@ -770,7 +773,7 @@ SS_output <-
   # read weight-at-age file
   wtatage <- NULL
   if(readwt){
-    wtfile <- paste(dir,wtfile,sep="/")
+    wtfile <- file.path(dir,wtfile)
     if(!file.exists(wtfile) | file.info(wtfile)$size==0){
       if(verbose) cat("Skipping weight-at-age file. File missing or empty:",wtfile,"\n")
     }else{
@@ -1198,21 +1201,48 @@ if(FALSE){
     shift <- -3
     if(SS_versionNumeric < 3.23) shift <- -1
     spr <- matchfun2("SPR_series",5,"Kobe_Plot",shift,header=TRUE)
-    Kobe <- matchfun2("Kobe_Plot",2,"SPAWN_RECRUIT",-1,header=TRUE)
+    Kobe_head <- matchfun2("Kobe_Plot",0,"Kobe_Plot",3,header=TRUE)
+    if(length(grep("F_report_basis_is_not",Kobe_head[1,1]))>0){
+      shift <- 2
+      Kobe_warn <- Kobe_head[1,1]
+    }else{
+      shift <- 1
+      Kobe_warn <- NA
+    }
+    Kobe <- matchfun2("Kobe_Plot",shift,"SPAWN_RECRUIT",-1,header=TRUE)
+    Kobe_MSY_basis <- names(Kobe)[1]
+    names(Kobe) <- Kobe[1,]
+    Kobe <- Kobe[-1,]
+    Kobe[Kobe=="_"] <- NA
+    for(icol in 1:3){
+      names(Kobe)[icol] <- sub("/",".",names(Kobe)[icol],fixed=TRUE)
+      Kobe[,icol] <- as.numeric(Kobe[,icol])
+    }
   }else{
     Kobe <- NA
+    Kobe_warn <- NA
+    Kobe_MSY_basis <- NA
   }
+  returndat$Kobe_warn <- Kobe_warn
+  returndat$Kobe_MSY_basis <- Kobe_MSY_basis
+  returndat$Kobe <- Kobe
   spr[spr=="_"] <- NA
   spr[spr=="&"] <- NA
   for(i in (1:ncol(spr))[!(names(spr)%in%c("Actual:","More_F(by_morph):"))]) spr[,i] <- as.numeric(spr[,i])
-  spr <- spr[spr$Year <= endyr,]
+  #spr <- spr[spr$Year <= endyr,]
   spr$spr <- spr$SPR
   returndat$sprseries <- spr
-  returndat$Kobe <- Kobe
   stats$last_years_SPR <- spr$spr[nrow(spr)]
   stats$SPRratioLabel <- managementratiolabels[1,2]
   stats$last_years_SPRratio <- spr$SPR_std[nrow(spr)]
 
+  returndat$managementratiolabels <- managementratiolabels
+  returndat$F_report_basis <- managementratiolabels$Label[2]
+  returndat$B_ratio_denominator <- as.numeric(strsplit(managementratiolabels$Label[3],"%")[[1]][1])/100
+  returndat$sprtarg <- sprtarg
+  returndat$btarg <- btarg
+  returndat$minbthresh <- minbthresh
+  
   if(forecast){
    returndat$equil_yield <- yielddat
    # stats$spr_at_msy <- as.numeric(rawforecast[33,2])
@@ -1222,11 +1252,6 @@ if(FALSE){
   }else{if(verbose) cat("You skipped the equilibrium yield data\n")}
   flush.console()
 
-  returndat$managementratiolabels <- managementratiolabels
-  returndat$B_ratio_denominator <- as.numeric(strsplit(managementratiolabels$Label[3],"%")[[1]][1])/100
-  returndat$sprtarg <- sprtarg
-  returndat$btarg <- btarg
-  returndat$minbthresh <- minbthresh
 
 
   # Spawner-recruit curve

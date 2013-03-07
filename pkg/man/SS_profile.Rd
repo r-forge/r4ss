@@ -10,9 +10,8 @@ SS_profile(dir = "C:/myfiles/mymodels/myrun/", masterctlfile =
   "control.ss_new", newctlfile = "control_modified.ss",
   linenum = NULL, string = NULL, profilevec = NULL,
   usepar = TRUE, dircopy = TRUE, exe.delete = FALSE,
-  command = "SS3 -nox", model = "ss3", systemcmd =
-  FALSE, saveoutput = TRUE, overwrite = FALSE, verbose =
-  TRUE)
+  model = "ss3", extras = "-nox", systemcmd = FALSE, saveoutput = TRUE,
+  overwrite = TRUE, verbose = TRUE)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{
@@ -47,11 +46,12 @@ SS_profile(dir = "C:/myfiles/mymodels/myrun/", masterctlfile =
   \item{profilevec}{
     Vector of values to profile over.  Default = NULL.
   }
-  \item{command}{
-    Call to executable. Default = "SS3 -nox".
-  }
   \item{model}{
     Name of executable. Default = "ss3".
+  }
+  \item{extras}{
+    Additional commands to use when running SS. Default = "-nox" will
+    reduce the amound of command-line output.
   }
   \item{systemcmd}{
     Should R call SS using "system" function intead of
@@ -62,7 +62,7 @@ SS_profile(dir = "C:/myfiles/mymodels/myrun/", masterctlfile =
     Default = TRUE.
   }
   \item{overwrite}{
-    Overwrite any existing .SSO files. Default = FALSE.
+    Overwrite any existing .SSO files.
   }
   \item{verbose}{
     Controls amount of info output to command line.
