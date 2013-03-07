@@ -41,8 +41,8 @@ SS_plots <-
   ## if(verbose) cat("R function updated:",codedate,
   ##   "\nCheck for new code and report problems at http://code.google.com/p/r4ss/\n")
 
-  cat("Note: 'SS_plots' has reorganized plot groups and new HTML output option\n",
-      "     To get old code, you can find it in package version 1.17 and before.\n\n")
+  ## cat("Note: 'SS_plots' has reorganized plot groups and new HTML output option\n",
+  ##     "     To get old code, you can find it in package version 1.17 and before.\n\n")
 
   if(!is.null(print)) stop("The 'print' input has been replaced by 'png = TRUE/FALSE'\n",
                            "  which is combined with the vector of numbers input to 'plot'")
