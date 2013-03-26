@@ -5,6 +5,7 @@ SSplotComps <-
            datonly=FALSE, samplesizeplots=TRUE, compresidplots=TRUE, bub=FALSE,
            showsampsize=TRUE, showeffN=TRUE, minnbubble=8, pntscalar=NULL,
            scalebubbles=FALSE,bub.scale.pearson=1.5,bub.scale.dat=3,
+           blue=rgb(0,0,1,0.7),
            pwidth=7, pheight=7, punits="in", ptsize=12, res=300,
            plotdir="default", cex.main=1, linepos=1, fitbar=FALSE, 
            do.sqrt=TRUE, smooth=TRUE, cohortlines=c(),
@@ -326,7 +327,7 @@ SSplotComps <-
               allopen <- TRUE
             }else{
               z <- dbase$Pearson
-              col <- "blue"
+              col <- blue
               cexZ1 <- bub.scale.pearson
               titletype <- "Pearson residuals, "
               filetype <- "resids"
@@ -474,7 +475,7 @@ SSplotComps <-
                     titles <- c(ptitle,titles) # compiling list of all plot titles
                     tempfun5 <- function(){
                       bubble3(x=ydbase$Bin,y=ydbase$Lbin_lo,z=z,xlab=labels[2],
-                              ylab=labels[1],col="blue",las=1,main=ptitle,
+                              ylab=labels[1],col=blue,las=1,main=ptitle,
                               cex.main=cex.main,maxsize=pntscalar,
                               cexZ1=bub.scale.pearson,
                               allopen=FALSE,minnbubble=minnbubble)
@@ -563,7 +564,7 @@ SSplotComps <-
                 if(nrow(dbasegood)>0){
                   plot(dbasegood$N,dbasegood$effN,xlab=labels[4],main=ptitle,cex.main=cex.main,
                        ylim=c(0,1.05*max(dbasegood$effN)),xlim=c(0,1.05*max(dbasegood$N)),
-                       col="blue",pch=19,ylab=labels[5],xaxs="i",yaxs="i")
+                       col=blue,pch=19,ylab=labels[5],xaxs="i",yaxs="i")
                   abline(h=0,col="grey")
                   abline(0,1,col="black")
                   # add loess smoother if there's at least 6 points with a range greater than 2
@@ -575,8 +576,8 @@ SSplotComps <-
                     lines(psmooth$x[order(psmooth$x)],psmooth$fit[order(psmooth$x)],lwd=1.2,col="red",lty="dashed")
                   }
                   if(addMeans){
-                    abline(v=mean(dbasegood$N),lty=3,col='green3')
-                    abline(h=1/mean(1/dbasegood$effN),lty=3,col='green3')
+                    abline(v=mean(dbasegood$N),lty="22",col='green3')
+                    abline(h=1/mean(1/dbasegood$effN),lty="22",col='green3')
                   }
                 }
               }
@@ -644,22 +645,32 @@ SSplotComps <-
                   }
                   if (length(Obs) > 0){
                     ymax <- max(Pred,Obs,Upp)*1.1
-                    plot(Size,Obs,xlab="",ylab="Age",pch=16,xlim=c(min(Lens),max(Lens)),ylim=c(0,ymax),yaxs="i")
+                    plot(Size,Obs,type='n',xlab="",ylab="Age",xlim=c(min(Lens),max(Lens)),ylim=c(0,ymax),yaxs="i")
                     text(x=par("usr")[1],y=.9*ymax,labels=Yr,adj=c(-.5,0),font=2,cex=1.2)
-                    lines(Size,Pred)
+                    polygon(c(Size,rev(Size)),c(Low,rev(Upp)),col='grey95',border=NA)
+                    lines(Size,Pred,col=4,lwd=3)
+                    points(Size,Obs,pch=16)
                     lines(Size,Low,lty=3)
                     lines(Size,Upp,lty=3)
                     #title(paste("Year = ",Yr,"; Gender = ",Gender))
-
-                    if(par("mfg")[1] & par("mfg")[2]==1){ # first plot on any new page
+                    if(par("mfg")[1]==1){
                       title(main=ptitle,xlab=labels[1],outer=TRUE,line=1)
                     }
+                    box()
+
                     ymax <- max(Obs2,Pred2)*1.1
-                    plot(Size,Obs2,xlab=labels[1],ylab=labels[13],pch=16,xlim=c(min(Lens),max(Lens)),ylim=c(0,ymax),yaxs="i")
-                    lines(Size,Pred2)
+                    plot(Size,Obs2,type='n',xlab=labels[1],ylab=labels[13],xlim=c(min(Lens),max(Lens)),ylim=c(0,ymax),yaxs="i")
+                    #if(
+                    polygon(c(Size2,rev(Size2)),c(Low2,rev(Upp2)),col='grey95',border=NA)
+                    lines(Size,Pred2,col=4,lwd=3)
+                    points(Size,Obs2,pch=16)
                     lines(Size2,Low2,lty=3)
                     lines(Size2,Upp2,lty=3)
-
+                    if(par("mfg")[1]==1){
+                      legend('topleft',legend=c("Observed (with 95% interval)","Expected"),
+                             bty='n',col=c(1,4),pch=c(16,NA),lwd=c(NA,3))
+                    }
+                    box()
 
                   } # end if data exist
                 } # end loop over years
@@ -1183,7 +1194,7 @@ SSplotComps <-
                 allopen <- TRUE
               }else{
                 z <- dbase$Pearson
-                col <- "blue"
+                col <- blue
                 cexZ1 <- bub.scale.pearson
                 titletype <- "Pearson residuals, "
                 filetype <- "resids"
@@ -1232,30 +1243,32 @@ SSplotComps <-
           } # end function wrapping up a single page of the residual comparison plot
 
           # make plots or write to PNG file
-          if(plot) tempfun11(ipage=0)
-          if(print){ # set up plotting to png file if required
-            npages <- ceiling(length(fleetvec)/maxrows)
-            for(ipage in 1:npages){
-              caption <- ptitle
-              pagetext <- ""
-              if(npages>1){
-                pagetext <- paste("_page",ipage,sep="")
-                caption <- paste(caption, " (plot ",ipage," of ",npages,")",sep="")
-              }
-              if(length(grep("Pearson",caption))>0){
+          if(length(fleetvec)>0){
+            if(plot) tempfun11(ipage=0)
+            if(print){ # set up plotting to png file if required
+              npages <- ceiling(length(fleetvec)/maxrows)
+              for(ipage in 1:npages){
+                caption <- ptitle
+                pagetext <- ""
+                if(npages>1){
+                  pagetext <- paste("_page",ipage,sep="")
+                  caption <- paste(caption, " (plot ",ipage," of ",npages,")",sep="")
+                }
+                if(length(grep("Pearson",caption))>0){
+                  caption <- paste(caption,
+                                   "<br> \nClosed bubbles are positive residuals and open bubbles are negative residuals.")
+                }
                 caption <- paste(caption,
-                                 "<br> \nClosed bubbles are positive residuals and open bubbles are negative residuals.")
-              }
-              caption <- paste(caption,
-                               "<br>Note: bubble sizes are scaled to maximum within each panel.",
-                               "<br>Thus, comparisons across panels should focus on patterns, not bubble sizes.")
-              file <- paste(plotdir,filenamestart,filename_sexmkt,pagetext,
-                            "_multi-fleet_comparison.png",sep="")
-              plotinfo <- pngfun(file=file, caption=caption)
-              tempfun11(ipage=ipage)
-              dev.off()
-            } # end loop over pages within printing PNG
-          } # end printing to PNG files
+                                 "<br>Note: bubble sizes are scaled to maximum within each panel.",
+                                 "<br>Thus, comparisons across panels should focus on patterns, not bubble sizes.")
+                file <- paste(plotdir,filenamestart,filename_sexmkt,pagetext,
+                              "_multi-fleet_comparison.png",sep="")
+                plotinfo <- pngfun(file=file, caption=caption)
+                tempfun11(ipage=ipage)
+                dev.off()
+              } # end loop over pages within printing PNG
+            } # end printing to PNG files
+          } # end test for non-zero number of fleets
         } # end loop over partitions
       } # end loop over sexes
     } # end loop over gender combinations

@@ -68,7 +68,7 @@ SS_output <-
   parfile <- dir(dir,pattern=".par$")
   if(length(parfile)>1){
     filetimes <- file.info(file.path(dir,parfile))$mtime
-    parfile <- parfile[filetimes==max(filetimes)]
+    parfile <- parfile[filetimes==max(filetimes)][1]
     if(verbose) cat("Multiple files in directory match pattern *.par\n",
                     "choosing most recently modified:",parfile,"\n")
   }
@@ -609,9 +609,23 @@ SS_output <-
   like <- data.frame(signif(as.numeric(rawlike[,2]),digits=7))
   names(like) <- "values"
   rownames(like) <- rawlike[,1]
-  like$lambdas <- rawlike[,3]
+  lambdas <- rawlike[,3]
+  lambdas[lambdas==""] <- NA
+  lambdas <- as.numeric(lambdas)
+  like$lambdas <- lambdas
   stats$likelihoods_used <- like
-  stats$likelihoods_raw_by_fleet <- matchfun2("Fleet:",0,"Input_Variance_Adjustment",-1,header=TRUE)
+  stats$likelihoods_raw_by_fleet <-
+    likelihoods_by_fleet <-
+      matchfun2("Fleet:",0,"Input_Variance_Adjustment",-1,header=TRUE)
+  likelihoods_by_fleet[likelihoods_by_fleet=="_"] <- NA
+  for(icol in 2:ncol(likelihoods_by_fleet)) likelihoods_by_fleet[,icol] <- as.numeric(likelihoods_by_fleet[,icol])
+  names(likelihoods_by_fleet) <- c("Label","ALL",FleetNames)
+  labs <- likelihoods_by_fleet$Label
+  # removing ":" at the end of likelihood components
+  for(irow in 1:length(labs)) labs[irow] <- substr(labs[irow],1,nchar(labs[irow])-1)
+  likelihoods_by_fleet$Label <- labs
+  stats$likelihoods_by_fleet <- likelihoods_by_fleet
+  
 
   # parameters
   if(SS_versionNumeric>= 3.23) shift <- -1

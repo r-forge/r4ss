@@ -5,7 +5,7 @@ function(
          newctlfile="control_modified.ss", # must match entry in starter file
          linenum=NULL, string=NULL, profilevec=NULL, usepar=TRUE,
          dircopy=TRUE, exe.delete=FALSE,
-         model="ss3",extras="-nox",systemcmd=FALSE,saveoutput=TRUE,
+         model='ss3',extras="-nox",systemcmd=FALSE,saveoutput=TRUE,
          overwrite=TRUE,
          verbose=TRUE)
 {
@@ -36,7 +36,7 @@ function(
     exe <- tolower(paste(model,ifelse(OS=="Windows",".exe",""),sep=""))
   }
   # check whether exe is in directory
-  if(!exe %in% tolower(dir())) stop("Executable ",exe," not found in ",dir)
+  if(!exe %in% tolower(dir(dir))) stop("Executable ",exe," not found in ",dir)
 
   if(length(linenum)+length(string)!=1)
     stop("one value should be input for either 'linenum' or 'string', but not both")
