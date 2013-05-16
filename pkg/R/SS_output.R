@@ -537,16 +537,16 @@ SS_output <-
             "  ",nrow(tagdbase1),"rows of 'TAG1' comp data, and\n",
             "  ",nrow(tagdbase2),"rows of 'TAG2' comp data.\n")
       }
-      Lbin_ranges <- as.data.frame(table(agedbase$Lbin_range))
-      names(Lbin_ranges)[1] <- "Lbin_hi-Lbin_lo"
-      if(length(unique(agedbase$Lbin_range)) > 1){
-        cat("Warning!: different ranges of Lbin_lo to Lbin_hi found in age comps.\n")
-        print(Lbin_ranges)
-        cat("  consider increasing 'aalmaxbinrange' to designate\n")
-        cat("  some of these data as conditional age-at-length\n")
-      }
       # convert bin indices to true lengths
       if(nrow(agedbase)>0){
+        Lbin_ranges <- as.data.frame(table(agedbase$Lbin_range))
+        names(Lbin_ranges)[1] <- "Lbin_hi-Lbin_lo"
+        if(length(unique(agedbase$Lbin_range)) > 1){
+          cat("Warning!: different ranges of Lbin_lo to Lbin_hi found in age comps.\n")
+          print(Lbin_ranges)
+          cat("  consider increasing 'aalmaxbinrange' to designate\n")
+          cat("  some of these data as conditional age-at-length\n")
+        }
         agebins <- sort(unique(agedbase$Bin[!is.na(agedbase$Bin)]))
       }else{
         agebins <- NA
@@ -557,9 +557,13 @@ SS_output <-
     # if comp option is turned off
     lbins <- NA
     nlbins <- NA
-    temp <- rawrep[grep("NUMBERS_AT_LENGTH",rawrep[,1])+1,]
-    lbinspop <- as.numeric(temp[temp!=""][-(1:11)])
-    nlbinspop <- length(lbinspop)
+
+    #### need to get length bins from somewhere
+    ## temp <- rawrep[grep("NUMBERS_AT_LENGTH",rawrep[,1])+1,]
+    ## lbinspop <- as.numeric(temp[temp!=""][-(1:11)])
+    ## nlbinspop <- length(lbinspop)
+    lbinspop <- NA
+    nlbinspop <- ncol(selex)-5 # hopefully this works alright
     agebins <- NA
     nagebins <- NA
     Lbin_method <- 2
@@ -1456,20 +1460,25 @@ if(FALSE){
   }
   returndat$catage <- catage
 
-  # Z at age
-  #With_fishery
-  #No_fishery_for_Z=M_and_dynamic_Bzero
-  Z_at_age <- matchfun2("Z_AT_AGE_Annual_2",1,"Spawning_Biomass_Report_1",-2,header=TRUE)
-  M_at_age <- matchfun2("Z_AT_AGE_Annual_1",1,"-ln(Nt+1",-1,matchcol2=5, header=TRUE)
-  if(nrow(Z_at_age)>0){  
-    Z_at_age[Z_at_age=="_"] <- NA
-    M_at_age[M_at_age=="_"] <- NA
-    if(Z_at_age[[1]][1]!="absent" && nrow(Z_at_age>0)){
-      for(i in 1:ncol(Z_at_age)) Z_at_age[,i] <- as.numeric(Z_at_age[,i])
-      for(i in 1:ncol(M_at_age)) M_at_age[,i] <- as.numeric(M_at_age[,i])
-    }else{
-      Z_at_age <- NA
-      M_at_age <- NA
+  if(!is.na(matchfun("Z_AT_AGE"))){
+    # Z at age
+    #With_fishery
+    #No_fishery_for_Z=M_and_dynamic_Bzero
+    Z_at_age <- matchfun2("Z_AT_AGE_Annual_2",1,"Spawning_Biomass_Report_1",-2,header=TRUE)
+    M_at_age <- matchfun2("Z_AT_AGE_Annual_1",1,"-ln(Nt+1",-1,matchcol2=5, header=TRUE)
+    if(nrow(Z_at_age)>0){  
+      Z_at_age[Z_at_age=="_"] <- NA
+      M_at_age[M_at_age=="_"] <- NA
+      # if birth season is not season 1, you can get infinite values
+      Z_at_age[Z_at_age=="-1.#INF"] <- NA
+      M_at_age[M_at_age=="-1.#INF"] <- NA
+      if(Z_at_age[[1]][1]!="absent" && nrow(Z_at_age>0)){
+        for(i in 1:ncol(Z_at_age)) Z_at_age[,i] <- as.numeric(Z_at_age[,i])
+        for(i in 1:ncol(M_at_age)) M_at_age[,i] <- as.numeric(M_at_age[,i])
+      }else{
+        Z_at_age <- NA
+        M_at_age <- NA
+      }
     }
   }else{
     # this could be cleaned up

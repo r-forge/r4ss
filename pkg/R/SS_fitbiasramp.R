@@ -1,7 +1,7 @@
 SS_fitbiasramp <-
 function(replist, verbose=FALSE, startvalues=NULL, method="BFGS", twoplots=TRUE,
          transform=FALSE, plot=TRUE, print=FALSE, plotdir="default",
-         oldctl=NULL, newctl=NULL, nlminb=TRUE,
+         oldctl=NULL, newctl=NULL, altmethod="nlminb",
          pwidth=7, pheight=7, punits="in", ptsize=12, res=300, cex.main=1){
   ##################
   # function to estimate bias adjustment ramp
@@ -133,12 +133,20 @@ function(replist, verbose=FALSE, startvalues=NULL, method="BFGS", twoplots=TRUE,
 
   optimfun <- function(yr,std,startvalues){
     # run the optimizationt to find best fit values
-    if(nlminb){
+    if(altmethod=="nlminb"){
       biasopt <- nlminb(start=startvalues, objective=biasadjfit, gradient = NULL,
                         hessian = NULL, scale = 1, control = list(maxit=1000),
                         lower = c(-Inf,-Inf,-Inf,-Inf,0), upper = Inf,
                         yr=yr,std=std,sigmaR=sigma_R_in,transform=transform)
-    }else{
+    }
+    if(altmethod=="psoptim"){
+      require(pso)
+      biasadjfit(pars=startvalues,yr=yr,std=std,sigmaR=sigma_R_in,transform=transform)
+      biasopt <- psoptim(par=startvalues,fn=biasadjfit,yr=yr,std=std,
+                       sigmaR=sigma_R_in,transform=transform,
+                       control=list(maxit=1000,trace=TRUE),lower=rep(-1e6,5),upper=rep(1e6,5))
+    }
+    if(!(altmethod %in% c("nlminb","psoptim"))){
       biasopt <- optim(par=startvalues,fn=biasadjfit,yr=yr,std=std,
                        sigmaR=sigma_R_in,transform=transform,
                        method=method,control=list(maxit=1000))
@@ -193,9 +201,6 @@ function(replist, verbose=FALSE, startvalues=NULL, method="BFGS", twoplots=TRUE,
   recdev_lo <- val - 1.96*std
 
   ylim <- range(recdev_hi,recdev_lo)
-  cat("Note: the default optimizer has been changed to 'nlminb' from 'optim'\n",
-      "     if you have problems with this, set input 'nlminb' to FALSE\n",
-      "     and write to Ian.Taylor@noaa.gov to let me know of the issue.\n")
   cat('Now estimating alternative recruitment bias adjustment fraction...\n')
   newbias <- optimfun(yr=yr,std=std,startvalues=startvalues)
 

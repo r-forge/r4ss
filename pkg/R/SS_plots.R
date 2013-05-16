@@ -10,12 +10,14 @@ SS_plots <-
     bub.scale.pearson=1.5,bub.scale.dat=3,pntscalar.nums=2.6,
     minnbubble=8, aalyear=-1, aalbin=-1, aalresids=FALSE, maxneff=5000,
     cohortlines=c(), smooth=TRUE, showsampsize=TRUE, showeffN=TRUE,
+    sampsizeline=FALSE,effNline=FALSE,
     showlegend=TRUE, pwidth=7, pheight=7, punits="in", ptsize=12, res=300,
-    cex.main=1,selexlines=1:5, rows=1, cols=1, maxrows=6, maxcols=6,
-    maxrows2=2, maxcols2=4, tagrows=3, tagcols=3, fixdims=TRUE, new=TRUE,
+    cex.main=1,selexlines=1:6, rows=1, cols=1, maxrows=6, maxcols=6,
+    maxrows2=2, maxcols2=4, andrerows=3, tagrows=3, tagcols=3, fixdims=TRUE,
+    new=TRUE,
     SSplotDatMargin=8, filenotes=NULL, catchasnumbers=NULL, catchbars=TRUE,
     legendloc="topleft", minyr=NULL, maxyr=NULL, scalebins=FALSE,
-    scalebubbles=FALSE,...)
+    scalebubbles=FALSE,tslabels=NULL,catlabels=NULL,...)
 {
   ################################################################################
   #
@@ -181,6 +183,33 @@ SS_plots <-
     par(mar=mar0) # replace margins
   }
 
+if(length(tslabels)==0){
+  tslabels <- c("Total biomass (mt)", #1
+             "Total biomass (mt) at beginning of season", #2
+             "Summary biomass (mt)",      #3
+             "Summary biomass (mt) at beginning of season", #4
+             "Spawning biomass (mt)",     #5
+             "Spawning depletion",        #6
+             "Spawning output (eggs)",    #7
+             "Age-0 recruits (1,000s)",  #8
+             "Fraction of total Age-0 recruits",  #9
+             "Management target",       #10
+             "Minimum stock size threshold") #11
+  }
+
+if(length(catlabels)==0){
+  catlabels <- c("Harvest rate/Year",  #1
+             "Continuous F",              #2
+             "Landings",                  #3
+             "Total catch",               #4
+             "Predicted Discards",        #5  # should add units
+             "Discard fraction",          #6  # need to add by weight or by length
+             "(mt)",                      #7
+             "(numbers x1000)",           #8
+             "Observed and expected",     #9
+             "aggregated across seasons")
+  }
+
   ##########################################
   # Biology plots (mean weight, maturity, fecundity, spawning output)
   # and Time-varying growth
@@ -242,6 +271,7 @@ SS_plots <-
                                minyr=minyr,maxyr=maxyr,
                                pwidth=pwidth, pheight=pheight, punits=punits,
                                ptsize=ptsize, res=res, cex.main=cex.main,
+                               labels=tslabels,
                                plotdir=plotdir)
             if(!is.null(plotinfo)) plotInfoTable <- rbind(plotInfoTable,plotinfo)
           } # end loop over uncertainty or not
@@ -261,6 +291,7 @@ SS_plots <-
                              minyr=minyr,maxyr=maxyr,
                              pwidth=pwidth, pheight=pheight, punits=punits,
                              ptsize=ptsize, res=res, cex.main=cex.main,
+                             labels=tslabels,
                              plotdir=plotdir)
           if(!is.null(plotinfo)) plotInfoTable <- rbind(plotInfoTable,plotinfo)
         }
@@ -357,6 +388,8 @@ SS_plots <-
                   ptsize=ptsize, res=res,cex.main=cex.main,
                   catchasnumbers=catchasnumbers,
                   catchbars=catchbars,
+                  labels=catlabels,
+                  legendloc=legendloc,
                   plotdir=plotdir)
     plotinfo <- temp$plotinfo
     if(!is.null(plotinfo)) plotInfoTable <- rbind(plotInfoTable,plotinfo)
@@ -459,6 +492,7 @@ SS_plots <-
                     areanames=areanames,
                     areacols=areacols,
                     pntscalar=pntscalar.nums,
+                    bublegend=showlegend,
                     plot=!png, print=png,
                     pwidth=pwidth, pheight=pheight, punits=punits,
                     ptsize=ptsize, res=res,cex.main=cex.main,
@@ -485,27 +519,29 @@ SS_plots <-
       if(lenCompDatGroup %in% plot)  # data only aspects
       {
         if(verbose) cat("Starting length comp data plots (group ",lenCompDatGroup,")\n",sep="")
-        # length comp bar plot
+        # length comp polygon and bubble plots
         plotinfo <-
           SSplotComps(replist=replist,datonly=TRUE,kind="LEN",bub=TRUE,verbose=verbose,fleets=fleets,
                       fleetnames=fleetnames,
                       samplesizeplots=samplesizeplots,showsampsize=showsampsize,showeffN=FALSE,
-                      minnbubble=minnbubble, pntscalar=pntscalar,
+                      minnbubble=minnbubble, pntscalar=pntscalar, cexZ1=bub.scale.dat,
+                      bublegend=showlegend,
                       maxrows=maxrows,maxcols=maxcols,fixdims=fixdims,rows=rows,cols=cols,
                       plot=!png, print=png,
                       plotdir=plotdir,cex.main=cex.main,
-                      scalebins=scalebins,
+                      scalebins=scalebins, scalebubbles=scalebubbles,
                       pwidth=pwidth, pheight=pheight, punits=punits,
                       ptsize=ptsize, res=res,
                       ...)
         if(!is.null(plotinfo)) plotInfoTable <- rbind(plotInfoTable,plotinfo)
-        # size comp bubble plot
+        # size comp polygon and bubble plots
         for(sizemethod in sort(unique(replist$sizedbase$method))){
           plotinfo <-
             SSplotComps(replist=replist,datonly=TRUE,kind="SIZE",sizemethod=sizemethod,
                         bub=TRUE,verbose=verbose,fleets=fleets,fleetnames=fleetnames,
                         samplesizeplots=samplesizeplots,showsampsize=showsampsize,showeffN=FALSE,
-                        minnbubble=minnbubble, pntscalar=pntscalar,
+                        minnbubble=minnbubble, pntscalar=pntscalar, cexZ1=bub.scale.dat,
+                        bublegend=showlegend,
                         maxrows=maxrows,maxcols=maxcols,fixdims=fixdims,rows=rows,cols=cols,
                         plot=!png, print=png,
                         plotdir=plotdir,cex.main=cex.main,
@@ -518,26 +554,13 @@ SS_plots <-
       }
       if(ageCompDatGroup %in% plot){
         if(verbose) cat("Starting age comp data plots (group ",ageCompDatGroup,")\n",sep="")
-        # age comp bar plot
-        plotinfo <-
-          SSplotComps(replist=replist,datonly=TRUE,kind="AGE",bub=FALSE,verbose=verbose,fleets=fleets,
-                      fleetnames=fleetnames,
-                      samplesizeplots=samplesizeplots,showsampsize=showsampsize,showeffN=FALSE,
-                      minnbubble=minnbubble, pntscalar=pntscalar,
-                      maxrows=maxrows,maxcols=maxcols,fixdims=fixdims,rows=rows,cols=cols,
-                      plot=!png, print=png,
-                      plotdir=plotdir,cex.main=cex.main,
-                      scalebins=scalebins,
-                      pwidth=pwidth, pheight=pheight, punits=punits,
-                      ptsize=ptsize, res=res,
-                      ...)
-        if(!is.null(plotinfo)) plotInfoTable <- rbind(plotInfoTable,plotinfo)
-        # age comp bubble plot
+        # age comp polygon and bubble plots
         plotinfo <-
           SSplotComps(replist=replist,datonly=TRUE,kind="AGE",bub=TRUE,verbose=verbose,fleets=fleets,
                       fleetnames=fleetnames,
                       samplesizeplots=samplesizeplots,showsampsize=showsampsize,showeffN=FALSE,
-                      minnbubble=minnbubble, pntscalar=pntscalar,
+                      minnbubble=minnbubble, pntscalar=pntscalar, cexZ1=bub.scale.dat,
+                      bublegend=showlegend,
                       maxrows=maxrows,maxcols=maxcols,fixdims=fixdims,rows=rows,cols=cols,
                       plot=!png, print=png,
                       plotdir=plotdir,cex.main=cex.main,
@@ -546,26 +569,13 @@ SS_plots <-
                       ptsize=ptsize, res=res,
                       ...)
         if(!is.null(plotinfo)) plotInfoTable <- rbind(plotInfoTable,plotinfo)
-        # ghost age comp bar plot
-        plotinfo <-
-          SSplotComps(replist=replist,datonly=TRUE,kind="GSTAGE",bub=FALSE,verbose=verbose,fleets=fleets,
-                      fleetnames=fleetnames,
-                      samplesizeplots=samplesizeplots,showsampsize=FALSE,showeffN=FALSE,
-                      minnbubble=minnbubble, pntscalar=pntscalar,
-                      maxrows=maxrows,maxcols=maxcols,fixdims=fixdims,rows=rows,cols=cols,
-                      plot=!png, print=png,
-                      plotdir=plotdir,cex.main=cex.main,
-                      scalebins=scalebins,
-                      pwidth=pwidth, pheight=pheight, punits=punits,
-                      ptsize=ptsize, res=res,
-                      ...)
-        if(!is.null(plotinfo)) plotInfoTable <- rbind(plotInfoTable,plotinfo)
-        # ghost age comp bubble plot
+        # ghost age comp polygon and bubble plots
         plotinfo <-
           SSplotComps(replist=replist,datonly=TRUE,kind="GSTAGE",bub=TRUE,verbose=verbose,fleets=fleets,
                       fleetnames=fleetnames,
                       samplesizeplots=samplesizeplots,showsampsize=FALSE,showeffN=FALSE,
-                      minnbubble=minnbubble, pntscalar=pntscalar,
+                      minnbubble=minnbubble, pntscalar=pntscalar, cexZ1=bub.scale.dat,
+                      bublegend=showlegend,
                       maxrows=maxrows,maxcols=maxcols,fixdims=fixdims,rows=rows,cols=cols,
                       plot=!png, print=png,
                       plotdir=plotdir,cex.main=cex.main,
@@ -583,9 +593,12 @@ SS_plots <-
           SSplotComps(replist=replist,datonly=TRUE,kind="cond",bub=TRUE,verbose=verbose,fleets=fleets,
                       fleetnames=fleetnames,
                       samplesizeplots=samplesizeplots,showsampsize=showsampsize,showeffN=FALSE,
-                      minnbubble=minnbubble, pntscalar=pntscalar,
+                      sampsizeline=sampsizeline,effNline=effNline,
+                      minnbubble=minnbubble, pntscalar=pntscalar, cexZ1=bub.scale.dat,
+                      bublegend=showlegend,
                       maxrows=maxrows,maxcols=maxcols,maxrows2=maxrows2,maxcols2=maxcols2,
                       fixdims=fixdims,rows=rows,cols=cols,
+                      andrerows=andrerows,
                       plot=!png, print=png,
                       plotdir=plotdir,cex.main=cex.main,
                       scalebins=scalebins, scalebubbles=scalebubbles,
@@ -609,7 +622,8 @@ SS_plots <-
         SSplotComps(replist=replist,datonly=FALSE,kind="LEN",bub=TRUE,verbose=verbose,fleets=fleets,
                     fleetnames=fleetnames,
                     samplesizeplots=samplesizeplots,showsampsize=showsampsize,showeffN=showeffN,
-                    minnbubble=minnbubble, pntscalar=pntscalar,
+                    minnbubble=minnbubble, pntscalar=pntscalar, cexZ1=bub.scale.pearson,
+                    bublegend=showlegend,
                     maxrows=maxrows,maxcols=maxcols,fixdims=fixdims,rows=rows,cols=cols,
                     plot=!png, print=png,smooth=smooth,plotdir=plotdir,
                     maxneff=maxneff,cex.main=cex.main,cohortlines=cohortlines,
@@ -623,7 +637,8 @@ SS_plots <-
         SSplotComps(replist=replist,datonly=FALSE,kind="GSTLEN",bub=TRUE,verbose=verbose,fleets=fleets,
                     fleetnames=fleetnames,
                     samplesizeplots=FALSE,showsampsize=FALSE,showeffN=FALSE,
-                    minnbubble=minnbubble, pntscalar=pntscalar,
+                    minnbubble=minnbubble, pntscalar=pntscalar, cexZ1=bub.scale.pearson,
+                    bublegend=showlegend,
                     maxrows=maxrows,maxcols=maxcols,fixdims=fixdims,rows=rows,cols=cols,
                     plot=!png, print=png,smooth=smooth,plotdir=plotdir,
                     maxneff=maxneff,cex.main=cex.main,cohortlines=cohortlines,
@@ -639,7 +654,8 @@ SS_plots <-
           SSplotComps(replist=replist,datonly=FALSE,kind="SIZE",sizemethod=sizemethod,
                       bub=TRUE,verbose=verbose,fleets=fleets, fleetnames=fleetnames,
                       samplesizeplots=samplesizeplots,showsampsize=showsampsize,showeffN=showeffN,
-                      minnbubble=minnbubble, pntscalar=pntscalar,
+                      minnbubble=minnbubble, pntscalar=pntscalar, cexZ1=bub.scale.pearson,
+                      bublegend=showlegend,
                       maxrows=maxrows,maxcols=maxcols,fixdims=fixdims,rows=rows,cols=cols,
                       plot=!png, print=png,smooth=smooth,plotdir=plotdir,
                       maxneff=maxneff,cex.main=cex.main,cohortlines=cohortlines,
@@ -663,7 +679,8 @@ SS_plots <-
         SSplotComps(replist=replist,datonly=FALSE,kind="AGE",bub=TRUE,verbose=verbose,fleets=fleets,
                     fleetnames=fleetnames,
                     samplesizeplots=samplesizeplots,showsampsize=showsampsize,showeffN=showeffN,
-                    minnbubble=minnbubble, pntscalar=pntscalar,
+                    minnbubble=minnbubble, pntscalar=pntscalar, cexZ1=bub.scale.pearson,
+                    bublegend=showlegend,
                     maxrows=maxrows,maxcols=maxcols,fixdims=fixdims,rows=rows,cols=cols,
                     plot=!png, print=png,smooth=smooth,plotdir=plotdir,
                     maxneff=maxneff,cex.main=cex.main,
@@ -676,7 +693,8 @@ SS_plots <-
         SSplotComps(replist=replist,datonly=FALSE,kind="GSTAGE",bub=TRUE,verbose=verbose,fleets=fleets,
                     fleetnames=fleetnames,
                     samplesizeplots=FALSE,showsampsize=FALSE,showeffN=FALSE,
-                    minnbubble=minnbubble, pntscalar=pntscalar,
+                    minnbubble=minnbubble, pntscalar=pntscalar, cexZ1=bub.scale.pearson,
+                    bublegend=showlegend,
                     maxrows=maxrows,maxcols=maxcols,fixdims=fixdims,rows=rows,cols=cols,
                     plot=!png, print=png,smooth=smooth,plotdir=plotdir,
                     maxneff=maxneff,cex.main=cex.main,
@@ -700,7 +718,9 @@ SS_plots <-
           SSplotComps(replist=replist,subplots=3,datonly=FALSE,kind="cond",bub=TRUE,verbose=verbose,fleets=fleets,
                       fleetnames=fleetnames,
                       samplesizeplots=samplesizeplots,showsampsize=showsampsize,showeffN=showeffN,
-                      minnbubble=minnbubble, pntscalar=pntscalar,
+                      sampsizeline=sampsizeline,effNline=effNline,
+                      minnbubble=minnbubble, pntscalar=pntscalar, cexZ1=bub.scale.pearson,
+                      bublegend=showlegend,
                       maxrows=maxrows,maxcols=maxcols,maxrows2=maxrows2,maxcols2=maxcols2,fixdims=fixdims,rows=rows,cols=cols,
                       plot=!png, print=png,smooth=smooth,plotdir=plotdir,
                       maxneff=maxneff,cex.main=cex.main,
@@ -717,7 +737,9 @@ SS_plots <-
                       fleetnames=fleetnames,
                       aalbin=aalbin,aalyear=aalyear,
                       samplesizeplots=samplesizeplots,showsampsize=showsampsize,showeffN=showeffN,
-                      minnbubble=minnbubble, pntscalar=pntscalar,
+                      sampsizeline=sampsizeline,effNline=effNline,
+                      minnbubble=minnbubble, pntscalar=pntscalar, cexZ1=bub.scale.pearson,
+                      bublegend=showlegend,
                       maxrows=maxrows,maxcols=maxcols,maxrows2=maxrows2,maxcols2=maxcols2,fixdims=fixdims,rows=rows,cols=cols,
                       plot=!png, print=png,smooth=smooth,plotdir=plotdir,
                       maxneff=maxneff,cex.main=cex.main,
@@ -734,7 +756,8 @@ SS_plots <-
                       fleetnames=fleetnames,
                       aalbin=aalbin,
                       samplesizeplots=samplesizeplots,showsampsize=showsampsize,showeffN=showeffN,
-                      minnbubble=minnbubble, pntscalar=pntscalar,
+                      minnbubble=minnbubble, pntscalar=pntscalar, cexZ1=bub.scale.pearson,
+                      bublegend=showlegend,
                       maxrows=maxrows,maxcols=maxcols,maxrows2=maxrows2,maxcols2=maxcols2,fixdims=fixdims,rows=rows,cols=cols,
                       plot=!png, print=png,smooth=smooth,plotdir=plotdir,
                       maxneff=maxneff,cex.main=cex.main,
@@ -769,6 +792,7 @@ SS_plots <-
                       samplesizeplots=samplesizeplots,showsampsize=showsampsize,showeffN=showeffN,
                       minnbubble=minnbubble, pntscalar=pntscalar,
                       maxrows=maxrows,maxcols=maxcols,maxrows2=maxrows2,maxcols2=maxcols2,fixdims=fixdims,rows=rows,cols=cols,
+                      andrerows=andrerows,
                       plot=!png, print=png,smooth=smooth,plotdir=plotdir,
                       maxneff=maxneff,cex.main=cex.main,
                       scalebins=FALSE,

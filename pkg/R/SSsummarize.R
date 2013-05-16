@@ -6,6 +6,7 @@ SSsummarize <- function(biglist,
                         selfleet=NULL,
                         selyr="startyr",
                         selgender=1,
+                        SpawnOutputUnits=NULL,
                         lowerCI=0.025,
                         upperCI=0.975){
 
@@ -67,6 +68,7 @@ SSsummarize <- function(biglist,
   maxgrad    <- NULL
   nsexes     <- NULL
   likelihoods <- likelambdas <- as.data.frame(matrix(NA,nrow=length(likenames),ncol=n))
+  likelihoods_by_fleet <- NULL
   indices    <- NULL
   sizesel    <- NULL
   agesel     <- NULL
@@ -146,6 +148,14 @@ SSsummarize <- function(biglist,
       likelihoods[likenames==rownames(liketemp)[irow], imodel] <- liketemp$values[irow]
       likelambdas[likenames==rownames(liketemp)[irow], imodel] <- liketemp$lambdas[irow]
     }
+    liketemp2 <- data.frame(model=imodel,stats$likelihoods_by_fleet)
+    if(is.null(likelihoods_by_fleet) ||
+       (ncol(likelihoods_by_fleet)==ncol(liketemp2) &&
+         all(names(likelihoods_by_fleet)==names(liketemp2)))){
+      likelihoods_by_fleet <- rbind(likelihoods_by_fleet,liketemp2)
+    }else{
+      cat("\nproblem summarizing likelihoods by fleet due to mismatched columns\n")
+    }
 
     ## compile parameters
     parstemp <- stats$parameters
@@ -173,7 +183,27 @@ SSsummarize <- function(biglist,
       cat("problem summarizing indices due to mismatched columns\n")
     }
 
+    # number of parameters
     npars <- c(npars, stats$N_estimated_parameters)
+
+    # 2nd fecundity parameter indicates whether spawning output is proportional to biomass
+    if(!is.null(SpawnOutputUnits)){
+      # if 1 value is input, repeate n times
+      if(length(SpawnOutputUnits)==1) SpawnOutputUnits <- rep(SpawnOutputUnits,n)
+      # if total doesn't currently equal n, stop everything
+      if(length(SpawnOutputUnits)!=n)
+        stop("'SpawnOutputUnits' should have length = 1 or",n)
+    }else{
+      # if NULL, then make vector of NA values
+      SpawnOutputUnits <- rep(NA,n)
+    }
+    # if NA value in vector for current model, replace with value from model
+    if(is.na(SpawnOutputUnits[imodel]))
+      if(stats$FecPar2==0){
+        SpawnOutputUnits[imodel] <- "biomass"
+      }else{
+        SpawnOutputUnits[imodel] <- "numbers"
+      }
   } # end loop over models
 
   if(!setequal(keyvec,keyvec2)){
@@ -339,6 +369,7 @@ SSsummarize <- function(biglist,
   }else{
     recdevs <- recdevsSD <- recdevsLower <- recdevsUpper <- NULL
   }
+  
   mylist <- list()
   mylist$n              <- n
   mylist$npars          <- npars
@@ -355,6 +386,7 @@ SSsummarize <- function(biglist,
   mylist$quantsSD       <- quantsSD
   mylist$likelihoods    <- likelihoods
   mylist$likelambdas    <- likelambdas
+  mylist$likelihoods_by_fleet <- likelihoods_by_fleet
   mylist$SpawnBio       <- SpawnBio
   mylist$SpawnBioSD     <- SpawnBioSD
   mylist$SpawnBioLower  <- SpawnBioLower
@@ -382,6 +414,7 @@ SSsummarize <- function(biglist,
   mylist$InitAgeYrs     <- InitAgeYrs
   mylist$lowerCI        <- lowerCI
   mylist$upperCI        <- upperCI
+  mylist$SpawnOutputUnits <- SpawnOutputUnits
   #mylist$lbinspop   <- as.numeric(names(stats$sizeselex)[-(1:5)])
   
   return(mylist)

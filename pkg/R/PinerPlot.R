@@ -51,9 +51,9 @@ PinerPlot <-
   }
   # check number of fleets to be plotted
   if(fleets[1]=="all"){
-    fleets <- 1:n
+    fleets <- 1:nfleets
   }else{
-    if(!all(fleets %in% 1:n))
+    if(!all(fleets %in% 1:nfleets))
       stop("Input 'fleets' should be a vector of values from 1 to nfleets=",nfleets," (for your inputs).\n")
   }
   
@@ -79,11 +79,15 @@ PinerPlot <-
   for(icol in 3:ncol(prof.table)){
     prof.table[,icol] <- prof.table[,icol] - min(prof.table[subset,icol])
   }
-  if(ymax=="default") ymax <- 1.1*max(prof.table[subset,-(1:2)])
+  
+  # subset values and reorder values
+  prof.table <- prof.table[order(parvec),]
+  nfleets <- ncol(prof.table)-3
+  prof.table <- prof.table[,c(1:3,3+(1:nfleets)[fleets])]
+
+  if(ymax=="default") ymax <- 1.1*max(prof.table[subset,-(1:2)],na.rm=TRUE)
   ylim <- c(0,ymax)
   
-  # reorder values
-  prof.table <- prof.table[order(parvec),]
   parvec <- parvec[order(parvec)]
     
   nlines <- ncol(prof.table)-2
